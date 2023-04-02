@@ -20,10 +20,6 @@ jobs:
     docker:
       - image: docker:17.05.0-ce-git
     steps:
-      - run:
-          name: Test Params
-          command: |
-            echo << pipeline.parameters.aws_account_id>>
       - checkout
       - setup_remote_docker
       - run:

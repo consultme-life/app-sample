@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
       - name: sample-app
-        image: <ACCOUNT_NAME>.dkr.ecr.<REGION>.amazonaws.com/mse-ecr:latest
+        image: <ACCOUNT_NAME>.dkr.ecr.<REGION>.amazonaws.com/<ECR_REPO_NAME>:latest
         ports:
         - containerPort: 5000
 ---
@@ -27,15 +27,18 @@ kind: Service
 metadata:
     name: sample-app-service
     namespace: sample
+    annotations:
+      service.beta.kubernetes.io/aws-load-balancer-internal: "false"
 spec:
-    type: ClusterIP
     selector: 
         app: sample-app
         type: backend
     ports:
     - port: 80
-      protocol: TCP
       targetPort: 5000
+    loadBalancerSourceRanges:
+    - "0.0.0.0/0"
+    type: LoadBalancer
 
 ---
 
