@@ -1,0 +1,12 @@
+# version: '2'
+# services:
+#     node:
+#         container_name: my_sample_node
+#         image: <ACCOUNT_ID>.dkr.ecr.us-east-1.amazonaws.com/<REPO_NAME>:latest
+#         build: 
+#             context: .
+#             dockerfile: ./Dockerfile
+#         environment:
+#             -NODE_ENV: development
+#         ports:
+#             - "80:5000"

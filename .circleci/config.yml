@@ -1,0 +1,96 @@
+version: 2.1
+
+parameters:
+  aws_account_id:
+    type: string
+    default: "<AWS ACCOUNT ID HERE>"
+  region:
+    type: string
+    default: "<REGION>"
+  eks_name:
+    type: string
+    default: "<EKS NAME>"
+  ecr_name:
+    type: string
+    default: "<ECR NAME>"
+
+jobs:
+
+  build-push-image:
+    docker:
+      - image: docker:17.05.0-ce-git
+    steps:
+      - run:
+          name: Test Params
+          command: |
+            echo << pipeline.parameters.aws_account_id>>
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Install dependencies
+          command: |
+            apk add --no-cache \
+              py-pip=9.0.0-r1
+            pip install \
+              docker-compose==1.12.0 \
+              awscli
+            
+      - restore_cache:
+          keys:
+            - v1-{{ .Branch }}
+          paths:
+            - /caches/app.tar
+      - run:
+          name: Load Docker image layer cache
+          command: |
+            set +o pipefail
+            docker load -i /caches/app.tar | true
+      - run:
+          name: build image
+          command: |
+            cd sample_nodejs
+            docker build -t << pipeline.parameters.aws_account_id>>.dkr.ecr.<< pipeline.parameters.region >>.amazonaws.com/mse-ecr:latest .
+      - run:
+          name: ECR login
+          command: |
+            docker login -u AWS https://<< pipeline.parameters.aws_account_id>>.dkr.ecr.<< pipeline.parameters.region >>.amazonaws.com -p $(aws ecr get-login-password --region << pipeline.parameters.region >>)
+      - run:
+          name: Push image
+          command: |
+            docker push << pipeline.parameters.aws_account_id >>.dkr.ecr.<< pipeline.parameters.region >>.amazonaws.com/<< pipeline.parameters.ecr_name >>:latest
+      
+  deploy-k8s:
+    docker:
+      - image: python:3.8
+    steps:
+      - checkout
+      - run:
+          name: Install dependencies
+          command: |
+            pip install awscli
+            curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl
+            chmod +x ./kubectl
+            mv ./kubectl /usr/local/bin
+      - run:
+          name: Update kubeconfig
+          command: |
+            aws eks update-kubeconfig --name << pipeline.parameters.eks_name>> --region << pipeline.parameters.region >>
+      - run:
+          name: Apply
+          command: |
+            kubectl apply -f deploy-k8s/namespace.yaml
+            kubectl apply -f deploy-k8s/app.yaml
+      
+      
+workflows:
+  version: 2
+  plan_approve_apply:
+    jobs:
+      - build-push-image-approval:
+          type: approval
+      - build-push-image:
+          requires:
+            - build-push-image-approval
+      - deploy-k8s:
+          requires:
+            - build-push-image

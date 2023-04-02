@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sample-app-deployment
+  namespace: sample
+spec:
+  selector:
+    matchLabels:
+      app: sample-app
+      type: backend
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: sample-app
+        type: backend
+    spec:
+      containers:
+      - name: sample-app
+        image: <ACCOUNT_NAME>.dkr.ecr.<REGION>.amazonaws.com/mse-ecr:latest
+        ports:
+        - containerPort: 5000
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+    name: sample-app-service
+    namespace: sample
+spec:
+    type: ClusterIP
+    selector: 
+        app: sample-app
+        type: backend
+    ports:
+    - port: 80
+      protocol: TCP
+      targetPort: 5000
+
+---
+
+apiVersion: autoscaling/v2beta2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: sample-app-hpa
+  namespace: sample
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: sample-app-deployment
+  minReplicas: 1
+  maxReplicas: 5
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 50

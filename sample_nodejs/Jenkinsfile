@@ -1,0 +1,21 @@
+// node{
+//       try {
+//             stage 'Checkout'
+//             checkout([
+//             $class: 'GitSCM', branches: [[name: '*/master']],
+//             userRemoteConfigs: [[url: 'https://github.com/mrkhurana/projects.git',credentialsId:'github']]
+//             ])
+//             def project_path="sample_nodejs"
+//             dir(project_path) {
+//             sh "pwd"
+//             stage 'Build'
+//             sh 'docker-compose build'
+//             stage 'Push to Repo'
+//             sh 'docker push mrkhurana/cml:sample_image_nodejs'
+//             }
+//       } catch (err) {
+//             }
+// }
+// def notify(status){
+// sh 'echo "Your build resulted in!!"'
+// }
